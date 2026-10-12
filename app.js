@@ -60,18 +60,7 @@ function drawBackground() {
   // track perspective
   ctx.fillStyle='#292453'; ctx.beginPath(); ctx.moveTo(105,142); ctx.lineTo(255,142); ctx.lineTo(360,640); ctx.lineTo(0,640); ctx.closePath(); ctx.fill();
   ctx.fillStyle='#38315e'; ctx.beginPath(); ctx.moveTo(110,142); ctx.lineTo(250,142); ctx.lineTo(331,640); ctx.lineTo(29,640); ctx.closePath(); ctx.fill();
-  // sleepers moving toward the player
-  for (let i=0;i<12;i++) {
-    const y=154+((i*48+world*170)%500), t=(y-142)/(H-142), p=roadPoint(0,y);
-    const w=12+t*205;
-    rect(W/2-w/2,y,w,Math.max(2,2+t*8),'#4c416f');
-  }
-  // rails and lane dashes
-  for (const side of [-1,1]) {
-    const x1=W/2+side*72, x2=W/2+side*169;
-    rect(x1,142,3,498,'#f9d44b'); rect(x2,142,4,498,'#f9d44b');
-    rect(x1-4,142,2,498,'#ff786c'); rect(x2+4,142,2,498,'#ff786c');
-  }
+  // lane dashes
   for (const divider of [-.5,.5]) {
     for(let i=0;i<9;i++) {
       const y=160+((i*66+world*155)%470), t=(y-142)/(H-142), x=W/2+divider*(75+t*94)*.66;
@@ -140,7 +129,7 @@ function render() {
   ctx.globalAlpha=1;
 }
 
-function reset() { elapsed=0; score=0; carrots=0; spawnClock=.45; lane=1; jump=0; slide=0; world=0; speed=1; objects=[]; updateHud(); }
+function reset() { elapsed=0; score=0; carrots=0; spawnClock=.35; lane=1; jump=0; slide=0; world=0; speed=1; objects=[]; updateHud(); }
 function updateHud() { scoreNode.textContent=String(Math.floor(score)).padStart(6,'0'); carrotsNode.textContent=String(carrots).padStart(2,'0'); }
 function start() { reset(); mode='playing'; overlay.classList.add('hidden'); last=performance.now(); requestAnimationFrame(loop); }
 function endGame() {
@@ -151,12 +140,13 @@ function endGame() {
 function spawn() {
   const laneIndex=Math.floor(Math.random()*3), roll=Math.random();
   const hazard=()=>({kind:Math.random()<.48?'barrier':Math.random()<.55?'train':'arch',y:145});
-  if(roll<.24) objects.push({kind:'carrot',lane:laneIndex,y:145});
+  if(roll<.23) objects.push({kind:'carrot',lane:laneIndex,y:145});
   else objects.push({...hazard(),lane:laneIndex});
-  if(Math.random()<.2) objects.push({kind:'carrot',lane:(laneIndex+1+Math.floor(Math.random()*2))%3,y:145});
+  if(Math.random()<.14) objects.push({kind:'carrot',lane:(laneIndex+1+Math.floor(Math.random()*2))%3,y:145});
   // Later runs sometimes close two tracks at once, always leaving one clear path.
-  const wallChance=Math.min(.34,Math.max(0,(elapsed-12)*.004));
-  if(elapsed>12 && roll>=.24 && Math.random()<wallChance) {
+  const scorePressure=Math.min(score/1800,1);
+  const wallChance=scorePressure*.8;
+  if(score>150 && roll>=.23 && Math.random()<wallChance) {
     const safeLane=(laneIndex+1+Math.floor(Math.random()*2))%3;
     for(let l=0;l<3;l++) if(l!==laneIndex && l!==safeLane) objects.push({...hazard(),lane:l});
   }
@@ -164,14 +154,14 @@ function spawn() {
 function loop(now) {
   if(mode!=='playing') return;
   const dt=Math.min(.04,(now-last)/1000); last=now; elapsed+=dt; world+=dt*speed;
-  const pressure=Math.min(elapsed/90,1);
+  const pressure=Math.min(score/1800,1);
   speed=1+pressure*.68; score+=dt*12*speed;
   if(jump>0) jump=Math.max(0,jump-dt/0.72);
   if(slide>0) slide=Math.max(0,slide-dt/0.68);
   spawnClock-=dt;
   if(spawnClock<=0) {
     spawn();
-    spawnClock=1.22-pressure*.42+Math.random()*.2;
+    spawnClock=.82-pressure*.25+Math.random()*.12;
   }
   const obstacleSpeed=260+pressure*175;
   for(const o of objects) o.y+=dt*obstacleSpeed;
